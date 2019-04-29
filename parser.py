@@ -42,11 +42,24 @@ class TopParser(BaseParser):
     def parse(self):
         for line in self._lines:
             try:
-                if self._process in line:
-                    day, month, date, time, timezone, year, pid, user, priority, nice, virtual_mem, res, shr, state, cpu, mem, cputime, command, command2 = line.split()
+                valid = False
+                for p in self._process:
+                    if p in line:
+                        valid = True
+                        break
+
+                if valid:
+                    print(line.split())
+                    day, month, date, time, timezone, year, pid, user, priority, nice, virtual_mem, res, shr, state, cpu, mem, cputime, *command = line.split()
                     self._timestamps.append(datetime.strptime(time, "%H:%M:%S").timestamp())
-                    self._cpu.append(float(cpu))
-                    self._mem.append(float(mem))
+                    if datetime.strptime(time, "%H:%M:%S").timestamp() not in self._cpu:
+                        self._cpu[datetime.strptime(time, "%H:%M:%S").timestamp()] = []
+
+                    if datetime.strptime(time, "%H:%M:%S").timestamp() not in self._mem:
+                        self._mem[datetime.strptime(time, "%H:%M:%S").timestamp()] = []
+
+                    self._cpu[datetime.strptime(time, "%H:%M:%S").timestamp()].append(float(cpu))
+                    self._mem[datetime.strptime(time, "%H:%M:%S").timestamp()].append(float(mem))
             except Exception as e:
                 print("\nERROR: {} for parsing line: {} in file {}".format(e, line, self._input_file), file=sys.stderr)
         self.convert_timestamps()

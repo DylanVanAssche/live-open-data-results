@@ -22,6 +22,10 @@ class Main():
         number_of_files = len(files)
         for i, path in enumerate(files):
             self.print_progress(i, number_of_files)
+            print(path)
+            _, mode, interval, filename = path.split("/")
+            print(mode)
+            print(interval)
 
             # Top file
             top = TopParser(path, self._process)
@@ -63,11 +67,14 @@ class Main():
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="LCRail benchmark.")
-    parser.add_argument("process",
-                        type=str,
-                        help="The name of the benchmarked process , for example: <process>-top-<name>.txt")
+    parser.add_argument('-p',
+                        '--processes',
+                        metavar='processes',
+                        action='append',
+                        help='<Required> List of processes to benchmark, for example: \"node nginx\"',
+                        required=True)
     args = parser.parse_args()
-    process = args.process
-    m = Main("*.txt", process)
+    processes = args.processes
+    m = Main("results/**/**/*.txt", processes)
     m.run()
 

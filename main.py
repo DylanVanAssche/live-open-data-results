@@ -26,15 +26,17 @@ class Main():
             _, mode, interval, filename = path.split("/")
             print(mode)
             print(interval)
+            self.create_data_tree(benchmark, mode, interval)
 
             # Top file
             top = TopParser(path, self._process)
             top.parse()
-            self._data[benchmark]["top"] = {
+            self._data[benchmark][mode][interval]["top"] = {
                                                             "cpu": top.cpu,
                                                             "mem": top.mem,
                                                             "timeline": top.timeline
                                                        }
+            print(self._data)
         # Parsing complete
         print("\nFinished parsing, processing plots...")
 
@@ -51,18 +53,16 @@ class Main():
         sys.stdout.write("[%-100s] %d%%" % ('=' * int(percentage), percentage))
         sys.stdout.flush()
 
-    def create_data_tree(self, benchmark, part, device):
+    def create_data_tree(self, benchmark, mode, interval):
         # Benchmark: original, rt-poll or rt-sse
         if not benchmark in self._data:
             self._data[benchmark] = {}
 
-        # Part of benchmark: liveboard or planner
-        if not part in self._data[benchmark]:
-            self._data[benchmark][part] = {}
+        if not mode in self._data[benchmark]:
+            self._data[benchmark][mode] = {}
 
-        # Device: jolla-1 or xperia-x
-        if not device in self._data[benchmark][part]:
-            self._data[benchmark][part][device] = {}
+        if not interval in self._data[benchmark][mode]:
+            self._data[benchmark][mode][interval] = {}
 
 if __name__ == "__main__":
     # Parse arguments

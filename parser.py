@@ -2,6 +2,7 @@
 import statistics
 import sys
 from datetime import datetime
+from collections import OrderedDict
 
 
 class BaseParser:
@@ -29,6 +30,9 @@ class BaseParser:
         for t in self._timestamps:
             self._timeline.append(t - begin_timestamp)
 
+        # Remove duplicates
+        self._timeline = list(OrderedDict.fromkeys(self._timeline))
+
     @property
     def timeline(self):
         return self._timeline
@@ -36,8 +40,8 @@ class BaseParser:
 class TopParser(BaseParser):
     def __init__(self, input_file, process):
         super().__init__(input_file, process)
-        self._cpu = []
-        self._mem = []
+        self._cpu = {}
+        self._mem = {}
 
     def parse(self):
         for line in self._lines:
@@ -49,20 +53,31 @@ class TopParser(BaseParser):
                         break
 
                 if valid:
-                    print(line.split())
                     day, month, date, time, timezone, year, pid, user, priority, nice, virtual_mem, res, shr, state, cpu, mem, cputime, *command = line.split()
                     self._timestamps.append(datetime.strptime(time, "%H:%M:%S").timestamp())
-                    if datetime.strptime(time, "%H:%M:%S").timestamp() not in self._cpu:
-                        self._cpu[datetime.strptime(time, "%H:%M:%S").timestamp()] = []
+                    if time not in self._cpu:
+                        self._cpu[time] = []
 
-                    if datetime.strptime(time, "%H:%M:%S").timestamp() not in self._mem:
-                        self._mem[datetime.strptime(time, "%H:%M:%S").timestamp()] = []
+                    if time not in self._mem:
+                        self._mem[time] = []
 
-                    self._cpu[datetime.strptime(time, "%H:%M:%S").timestamp()].append(float(cpu))
-                    self._mem[datetime.strptime(time, "%H:%M:%S").timestamp()].append(float(mem))
+                    self._cpu[time].append(float(cpu))
+                    self._mem[time].append(float(mem))
             except Exception as e:
                 print("\nERROR: {} for parsing line: {} in file {}".format(e, line, self._input_file), file=sys.stderr)
+                raise e
+        cpu_list = []
+        mem_list = []
+        for k in self._cpu.keys():
+            self._cpu[k] = sum(self._cpu[k])
+            cpu_list.append(self._cpu[k])
+
+        for k in self._mem.keys():
+            self._mem[k] = sum(self._mem[k])
+            mem_list.append(self._mem[k])
         self.convert_timestamps()
+        self._cpu = cpu_list
+        self._mem = mem_list
 
     @property
     def cpu(self):

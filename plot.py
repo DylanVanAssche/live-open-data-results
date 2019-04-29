@@ -103,22 +103,22 @@ class Plotter():
                      fontweight="bold",
                      fontsize=10)
 
-    def plot_top(self, name, mode="cpu"):
+    def plot_top(self, name, mode2="cpu"):
         # Check if implemented
-        assert(mode == "cpu" or mode == "mem")
+        assert(mode2 == "cpu" or mode2 == "mem")
         assert(name == "planner" or name == "liveboard")
 
         # Generate beautiful title
-        if mode == "cpu" and name == "planner":
+        if mode2 == "cpu" and name == "planner":
             plt.title("CPU usage (CSA)")
-        elif mode == "cpu" and name == "liveboard":
+        elif mode2 == "cpu" and name == "liveboard":
             plt.title("CPU usage (liveboard)")
-        elif mode == "mem" and name == "planner":
+        elif mode2 == "mem" and name == "planner":
             plt.title("RAM usage (CSA)")
-        elif mode == "mem" and name == "liveboard":
+        elif mode2 == "mem" and name == "liveboard":
             plt.title("RAM usage (liveboard)")
         else:
-            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode))
+            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode2))
 
         # Set figure size
         plt.rcParams["figure.figsize"] = [8, 5]
@@ -127,13 +127,15 @@ class Plotter():
         y_max = 0
         unit = "%"
         for benchmark in self._data:
-            if "top" in self._data[benchmark]:
-                # Find the mean value
-                mean = statistics.mean(self._data[benchmark]["top"][mode])
+            for mode in self._data[benchmark]:
+                for interval in self._data[benchmark][mode]:
+                    # Find the mean value
+                    print(self._data[benchmark][mode][interval]["top"][mode2])
+                    mean = statistics.mean(self._data[benchmark][mode][interval]["top"][mode2])
 
-                # Keep the maximum value
-                if mean > y_max:
-                    y_max = mean
+                    # Keep the maximum value
+                    if mean > y_max:
+                        y_max = mean
 
                 # Draw bar
                 #b = plt.bar(1,
@@ -142,13 +144,15 @@ class Plotter():
                 #                        align="center",
                 #                        color="red")
                 #self.bar_values(b, unit, 1)
-                print("MEAN={}".format(mean))
-                plt.plot(self._data[benchmark]["top"]["timeline"], self._data[benchmark]["top"]["cpu"])
+                    print("MEAN={}".format(mean))
+                    plt.plot(self._data[benchmark][mode][interval]["top"]["timeline"],
+                             self._data[benchmark][mode][interval]["top"]["cpu"])
+                plt.show()
 
         # Legend and axis labels
         #self.legend_bar()
         #self.axis_labels_bar(y_max, "Usage", unit)
-        plt.show()
+        #plt.show()
 
     def plot_nethogs_mean(self, name, mode="sent"):
         # Generate beautiful title

@@ -73,21 +73,23 @@ class Plotter():
         # X-axis data
         y_max = 0
         unit = "%"
-            # Find the mean value
+
+        # Find the mean and max values
         mean_cpu = statistics.mean(self._data[mode][interval]["cpu"])
         mean_mem = statistics.mean(self._data[mode][interval]["mem"])
         max_cpu = max(self._data[mode][interval]["cpu"])
         max_mem = max(self._data[mode][interval]["mem"])
         y_max = max(max_cpu, max_mem)
 
-        print("MEAN CPU={}".format(mean_cpu))
-        print("MEAN MEM={}".format(mean_mem))
+        # Plot CPU and memory usage
         plt.plot(self._data[mode][interval]["timeline"],
                              self._data[mode][interval]["cpu"],
                              color=COLOR_CPU)
         plt.plot(self._data[mode][interval]["timeline"],
                              self._data[mode][interval]["mem"],
                              color=COLOR_MEM)
+
+        # Plot the mean CPU and memory usage as text
         props = dict(boxstyle='round', facecolor='white', alpha=0.15)
         plt.text(-60.0,
                  min(1.25 * y_max, 100) * 0.95,
@@ -97,6 +99,7 @@ class Plotter():
                  linespacing=1.75,
                  bbox=props)
 
+        # Labels and legend
         self.axis_labels_plot(y_max, "Usage", unit)
         self.legend_plot()
         plt.show()

@@ -8,12 +8,8 @@ import sys
 import statistics
 from datetime import datetime
 BAR_WIDTH = 0.8
-COLOR_JOLLA_1 = "#c9211e"
-COLOR_XPERIA_X = "#3465a4"
-COLOR_ORIGINAL = "#c9211e"
-COLOR_RT_POLL = "#3465a4"
-COLOR_RT_SSE = "#127622"
-X_POS = [1, 3, 5]
+COLOR_CPU = "#3465a4"
+COLOR_MEM = "#c9211e"
 
 class Plotter():
     def __init__(self, data, bar_width=BAR_WIDTH):
@@ -21,72 +17,20 @@ class Plotter():
         self._bar_width = bar_width
 
         # Set figure size
-        plt.rcParams["figure.figsize"] = [8, 5]
-
-    def legend_bar(self):
-        custom_lines = [Line2D([0], [0], color=COLOR_XPERIA_X, lw=4),
-                        Line2D([0], [0], color=COLOR_JOLLA_1, lw=4)]
-        plt.legend(custom_lines, ["Xperia X", "Jolla 1"])
+        plt.rcParams["figure.figsize"] = [12, 8]
 
     def legend_plot(self):
-        custom_lines = [Line2D([0], [0], color=COLOR_ORIGINAL, lw=4),
-                        Line2D([0], [0], color=COLOR_RT_POLL, lw=4),
-                        Line2D([0], [0], color=COLOR_RT_SSE, lw=4)]
-        plt.legend(custom_lines, ["Original", "RT polling", "RT SSE"])
-
-    def axis_labels_bar(self, y_max, y_label, unit):
-        # X labels
-        x = np.array(X_POS)
-        my_xticks = ["Original", "RT polling", "RT SSE"]
-        plt.xticks(x, my_xticks)
-
-        # Y labels
-        plt.ylabel("{} ({})".format(y_label, unit))
-        plt.ylim(0, 1.5 * y_max)
+        custom_lines = [Line2D([0], [0], color=COLOR_CPU, lw=4),
+                        Line2D([0], [0], color=COLOR_MEM, lw=4)]
+        plt.legend(custom_lines, ["CPU", "Memory"])
 
     def axis_labels_plot(self, y_max, y_label, unit):
         # X labels
-        plt.xlabel("Time (ms)")
+        plt.xlabel("Time (s)")
 
         # Y labels
         plt.ylabel("{} ({})".format(y_label, unit))
-        plt.ylim(0, 1.5 * y_max)
-
-    def color_device(self, device):
-        if device == "jolla-1":
-            return COLOR_JOLLA_1
-        elif device == "xperia-x":
-            return COLOR_XPERIA_X
-        else:
-            raise NotImplementedError("Unknown device, no color available!")
-
-    def color_name(self, name):
-        if name == "original":
-            return COLOR_ORIGINAL
-        elif name == "rt-poll":
-            return COLOR_RT_POLL
-        elif name == "rt-sse":
-            return COLOR_RT_SSE
-        else:
-            raise NotImplementedError("Unknown name, cannot determine color")
-
-    def position(self, name):
-        if name == "original":
-            return X_POS[0]
-        elif name == "rt-poll":
-            return X_POS[1]
-        elif name == "rt-sse":
-            return X_POS[2]
-        else:
-            raise NotImplementedError("Unknown name, cannot determine bar position")
-
-    def position_move(self, device):
-        if device == "jolla-1":
-            return -self._bar_width/2.0
-        elif device == "xperia-x":
-            return self._bar_width/2.0
-        else:
-            raise NotImplementedError("Unknown device, no color available!")
+        plt.ylim(0, min(1.25 * y_max, 100))
 
     def bar_values(self, bar_graph, unit, rounding):
         # Draw values on top of each bar
@@ -103,179 +47,57 @@ class Plotter():
                      fontweight="bold",
                      fontsize=10)
 
-    def plot_top(self, name, mode2="cpu"):
+    def plot(self, mode, interval):
         # Check if implemented
-        assert(mode2 == "cpu" or mode2 == "mem")
-        assert(name == "planner" or name == "liveboard")
+        assert(mode == "polling" or mode == "pushing")
+        assert(interval == 1 or interval == 30)
 
         # Generate beautiful title
-        if mode2 == "cpu" and name == "planner":
-            plt.title("CPU usage (CSA)")
-        elif mode2 == "cpu" and name == "liveboard":
-            plt.title("CPU usage (liveboard)")
-        elif mode2 == "mem" and name == "planner":
-            plt.title("RAM usage (CSA)")
-        elif mode2 == "mem" and name == "liveboard":
-            plt.title("RAM usage (liveboard)")
+        if mode == "polling" and interval == 1:
+            plt.title("HTTP polling\n1 second interval")
+        elif mode == "polling" and interval == 30:
+            plt.title("HTTP polling\n30 seconds interval")
+        elif mode == "pushing" and interval == 1:
+            plt.title("SSE pushing\n1 second interval")
+        elif mode == "pushing" and interval == 30:
+            plt.title("SSE pushing\n30 seconds interval")
         else:
-            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode2))
+            raise NotImplementedError("Unknown benchmark mode ({}) and/or interval ({})".format(name, interval))
 
         # Set figure size
-        plt.rcParams["figure.figsize"] = [8, 5]
+        plt.rcParams["figure.figsize"] = [12, 8]
+
+        # Paths are strings, not numbers
+        interval = str(interval)
 
         # X-axis data
         y_max = 0
         unit = "%"
-        for benchmark in self._data:
-            for mode in self._data[benchmark]:
-                for interval in self._data[benchmark][mode]:
-                    # Find the mean value
-                    print(self._data[benchmark][mode][interval]["top"][mode2])
-                    mean = statistics.mean(self._data[benchmark][mode][interval]["top"][mode2])
+            # Find the mean value
+        mean_cpu = statistics.mean(self._data[mode][interval]["cpu"])
+        mean_mem = statistics.mean(self._data[mode][interval]["mem"])
+        max_cpu = max(self._data[mode][interval]["cpu"])
+        max_mem = max(self._data[mode][interval]["mem"])
+        y_max = max(max_cpu, max_mem)
 
-                    # Keep the maximum value
-                    if mean > y_max:
-                        y_max = mean
+        print("MEAN CPU={}".format(mean_cpu))
+        print("MEAN MEM={}".format(mean_mem))
+        plt.plot(self._data[mode][interval]["timeline"],
+                             self._data[mode][interval]["cpu"],
+                             color=COLOR_CPU)
+        plt.plot(self._data[mode][interval]["timeline"],
+                             self._data[mode][interval]["mem"],
+                             color=COLOR_MEM)
+        props = dict(boxstyle='round', facecolor='white', alpha=0.15)
+        plt.text(-60.0,
+                 min(1.25 * y_max, 100) * 0.95,
+                 "Mean CPU usage: {} %\nMean memory usage: {} %".format(round(mean_cpu, 1), round(mean_mem, 1)),
+                 verticalalignment="center",
+                 fontsize=10,
+                 linespacing=1.75,
+                 bbox=props)
 
-                # Draw bar
-                #b = plt.bar(1,
-                #                        mean,
-                #                        width=self._bar_width,
-                #                        align="center",
-                #                        color="red")
-                #self.bar_values(b, unit, 1)
-                    print("MEAN={}".format(mean))
-                    plt.plot(self._data[benchmark][mode][interval]["top"]["timeline"],
-                             self._data[benchmark][mode][interval]["top"]["cpu"])
-                plt.show()
-
-        # Legend and axis labels
-        #self.legend_bar()
-        #self.axis_labels_bar(y_max, "Usage", unit)
-        #plt.show()
-
-    def plot_nethogs_mean(self, name, mode="sent"):
-        # Generate beautiful title
-        if mode == "sent" and name == "planner":
-            plt.title("Network sent (CSA)")
-        elif mode == "sent" and name == "liveboard":
-            plt.title("Network sent (liveboard)")
-        elif mode == "received" and name == "planner":
-            plt.title("Network received (CSA)")
-        elif mode == "received" and name == "liveboard":
-            plt.title("Network received (liveboard)")
-        else:
-            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode))
-
-        # Set figure size
-        plt.rcParams["figure.figsize"] = [8, 5]
-
-        # X-axis data
-        y_max = 0
-        unit = "MB"
-        for benchmark in self._data:
-            for part in self._data[benchmark]:
-                if name in part:
-                    for device in self._data[benchmark][part]:
-                        if "nethogs" in self._data[benchmark][part][device]:
-                            # Find the maximum value (nethogs = accumulated)
-                            accumulated = self._data[benchmark][part][device]["nethogs"][mode][-1]
-
-                            # Keep the maximum value
-                            if accumulated > y_max:
-                                y_max = accumulated
-
-                            # Draw bar
-                            b = plt.bar(self.position(benchmark) + self.position_move(device),
-                                        accumulated,
-                                        width=self._bar_width,
-                                        align="center",
-                                        color=self.color_device(device))
-                            self.bar_values(b, unit, 1)
-
-        # Legend and axis labels
-        self.legend_bar()
-        self.axis_labels_bar(y_max, "Usage", unit)
-        plt.show()
-
-    def plot_nethogs_all(self, name, mode="sent", device="xperia-x"):
-        # Generate beautiful title
-        if mode == "sent" and name == "planner":
-            plt.title("Network sent (CSA)")
-        elif mode == "sent" and name == "liveboard":
-            plt.title("Network sent (liveboard)")
-        elif mode == "received" and name == "planner":
-            plt.title("Network received (CSA)")
-        elif mode == "received" and name == "liveboard":
-            plt.title("Network received (liveboard)")
-        else:
-            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode))
-
-        # Set figure size
-        plt.rcParams["figure.figsize"] = [8, 5]
-
-        # X-axis data
-        y_max = 0
-        unit = "MB"
-        for benchmark in self._data:
-            for part in self._data[benchmark]:
-                if name in part:
-                    for device_name in self._data[benchmark][part]:
-                        if "nethogs" in self._data[benchmark][part][device_name] and device == device_name:
-                            # Find the maximum value (nethogs = accumulated)
-                            accumulated = self._data[benchmark][part][device_name]["nethogs"][mode][-1]
-                            data = self._data[benchmark][part][device_name]["nethogs"][mode]
-                            timeline = self._data[benchmark][part][device_name]["nethogs"]["timeline"]
-
-                            # Keep the maximum value
-                            if accumulated > y_max:
-                                y_max = accumulated
-
-                            # Plot
-                            plt.plot(timeline, data, color=self.color_name(benchmark))
-
-        # Legend and axis labels
-        self.legend_plot()
         self.axis_labels_plot(y_max, "Usage", unit)
-        plt.show()
-
-    def plot_user_informed_time(self, name):
-        # Generate beautiful title
-        if name == "planner":
-            plt.title("Refresh time (CSA)")
-        elif name == "liveboard":
-            plt.title("Refresh time (liveboard)")
-        else:
-            raise NotImplementedError("Unknown benchmark name ({}) and mode ({})".format(name, mode))
-
-        # Set figure size
-        plt.rcParams["figure.figsize"] = [8, 5]
-
-        # X-axis data
-        y_max = 0
-        unit = "ms"
-        for benchmark in self._data:
-            for part in self._data[benchmark]:
-                if name in part:
-                    for device in self._data[benchmark][part]:
-                        if "user_informed_time" in self._data[benchmark][part][device]:
-                            # Find the mean value
-                            mean = statistics.mean(self._data[benchmark][part][device]["user_informed_time"][name])
-
-                            # Keep the maximum value
-                            if mean > y_max:
-                                y_max = mean
-
-                            # Draw bar
-                            b = plt.bar(self.position(benchmark) + self.position_move(device),
-                                        mean,
-                                        width=self._bar_width,
-                                        align="center",
-                                        color=self.color_device(device))
-                            self.bar_values(b, unit, 0)
-
-        # Legend and axis labels
-        self.legend_bar()
-        self.axis_labels_bar(y_max, "Time", unit)
+        self.legend_plot()
         plt.show()
 
